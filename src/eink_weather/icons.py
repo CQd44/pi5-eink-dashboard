@@ -137,12 +137,13 @@ def _cloud(
     draw.ellipse((ccx - rc, cy2 - rc, ccx + rc, cy2 + rc), fill=col)
     draw.ellipse((dx - rd, dy - rd, dx + rd, dy + rd), fill=col)
 
-    # Flat-bottomed rectangle that ties all four circles together
+    # Rounded-bottom rectangle that ties all four circles together
     bottom = max(ay + ra, by + rb, cy2 + rc, dy + rd)
     left   = ax - ra
     right  = dx + rd
     top    = bottom - int(r * 0.9)
-    draw.rectangle((left, top, right, bottom), fill=col)
+    corner_r = max(2, int(r * 0.45))
+    draw.rounded_rectangle((left, top, right, bottom), radius=corner_r, fill=col)
 
 
 def _rain_drops(
@@ -376,38 +377,6 @@ def draw_scene(
             draw.arc(smile_box, start=0, end=180,
                      fill=face_col, width=max(1, sun_r // 8))
 
-            # Sunglasses — random ~1-in-3 chance, stable within the hour
-            random.seed(int(fhour) * 17 + 99)
-            if random.random() < 0.33:
-                lg_w  = max(5, sun_r * 2 // 3)   # half-width of each lens
-                lg_h  = max(3, sun_r // 3)        # half-height
-                br    = max(1, lg_h // 2)          # corner radius
-                RED_C = (200, 0, 0)
-                BLK   = (0, 0, 0) if _ink == (0, 0, 0) else (30, 30, 30)
-                WHT   = (255, 255, 255)
-                for ex in (sun_x - eye_dx, sun_x + eye_dx):
-                    # Black lens
-                    draw.rounded_rectangle(
-                        (ex - lg_w, eye_y - lg_h, ex + lg_w, eye_y + lg_h),
-                        radius=br, fill=BLK,
-                    )
-                    # Red frame border
-                    draw.rounded_rectangle(
-                        (ex - lg_w, eye_y - lg_h, ex + lg_w, eye_y + lg_h),
-                        radius=br, outline=RED_C, width=max(1, sun_r // 8),
-                    )
-                    # White glare line — diagonal from upper-left to lower-right
-                    draw.line(
-                        (ex - lg_w + max(1, lg_w // 3), eye_y - lg_h + 1,
-                         ex + lg_w - max(1, lg_w // 3), eye_y + lg_h - 1),
-                        fill=WHT, width=max(1, lg_h // 3),
-                    )
-                # Bridge between the two lenses
-                draw.line(
-                    (sun_x - eye_dx + lg_w, eye_y,
-                     sun_x + eye_dx - lg_w, eye_y),
-                    fill=RED_C, width=max(1, sun_r // 10),
-                )
 
     # ── Moon (night) — phase-accurate, arc-tracked ───────────────────────────
     if is_night:
@@ -476,11 +445,11 @@ def draw_scene(
             cfill = (30, 30, 30) if dark else (55, 55, 55)
         csize   = max(w // 5, 30)
         cloud_positions = [
-            (x0 + w // 5,      y0 + int(sky_h * 0.25)),
-            (x0 + w * 3 // 5,  y0 + int(sky_h * 0.15)),
+            (x0 + w // 5,      y0 + int(sky_h * 0.50)),
+            (x0 + w * 3 // 5,  y0 + int(sky_h * 0.40)),
         ]
         if itype in ("cloudy", "fog"):
-            cloud_positions.append((x0 + w * 2 // 5, y0 + int(sky_h * 0.42)))
+            cloud_positions.append((x0 + w * 2 // 5, y0 + int(sky_h * 0.62)))
         for (cx, cy) in cloud_positions:
             _cloud(draw, cx, cy, csize, cfill)
 
@@ -538,29 +507,38 @@ def draw_scene(
                     draw.ellipse((cx2 - r, cy2 - r, cx2 + r, cy2 + r), fill=(60, 60, 60))
 
     # ── Layered hills (back → front, darkening) ───────────────────────────────
-    def _hill(pts_frac: list[tuple[float, float]], fill: tuple) -> None:
+    def _hill(pts_frac: list[tuple[float, float]], fill: tuple, outline: tuple | None = None) -> None:
         pts = [(x0 + int(fx * w), y0 + int(fy * h)) for fx, fy in pts_frac]
-        draw.polygon(pts, fill=fill)
+        draw.polygon(pts, fill=fill, outline=outline)
 
-    # Day: all channels < 64 → black ink (different shades visible in simulator).
-    # Night: all channels > 64 → white paper shows through black-ink sky.
-    hfar  = (150, 150, 150) if is_night else (55, 55, 55)
-    hmid  = (120, 120, 120) if is_night else (40, 40, 40)
-    hnear = (100, 100, 100) if is_night else (20, 20, 20)
+    BLK = (0, 0, 0)
+    RED = (200, 0, 0)
+    WHT = (255, 255, 255)
+
+    # Fake BWR depth — day: white(outline-only) → red → black (light→dark)
+    #                  night: white → red → black (moonlit pale → warm → dark)
+    if is_night:
+        hfar_fill, hfar_out   = WHT,  None
+        hmid_fill, hmid_out   = RED,  None
+        hnear_fill, hnear_out = BLK,  None
+    else:
+        hfar_fill, hfar_out   = WHT,  BLK   # outline-only = lightest
+        hmid_fill, hmid_out   = RED,  BLK   # red with black outline = medium
+        hnear_fill, hnear_out = BLK,  None  # solid black = darkest
 
     # Far hill — lightest
     _hill([
         (0.00, 1.00), (0.00, 0.68),
         (0.18, 0.59), (0.38, 0.64), (0.58, 0.57),
         (0.80, 0.62), (1.00, 0.60), (1.00, 1.00),
-    ], fill=hfar)
+    ], fill=hfar_fill, outline=hfar_out)
 
     # Mid hill
     _hill([
         (0.00, 1.00), (0.00, 0.77),
         (0.14, 0.71), (0.33, 0.66), (0.52, 0.69),
         (0.72, 0.64), (1.00, 0.70), (1.00, 1.00),
-    ], fill=hmid)
+    ], fill=hmid_fill, outline=hmid_out)
 
     # Near hill — darkest / foreground
     _hill([
@@ -568,7 +546,7 @@ def draw_scene(
         (0.11, 0.82), (0.28, 0.75), (0.48, 0.78),
         (0.68, 0.73), (0.86, 0.80), (1.00, 0.83),
         (1.00, 1.00),
-    ], fill=hnear)
+    ], fill=hnear_fill, outline=hnear_out)
 
     # Snow ground cover (over hills)
     if itype == "snow":
