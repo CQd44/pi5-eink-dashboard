@@ -162,7 +162,7 @@ class EInkDisplay:
         # ════════════════════════════════════════════════════════════════════
         # DIVIDERS
         # ════════════════════════════════════════════════════════════════════
-        d.line((MID_X, HDR_H + 2, MID_X, TOP_BOT - 2), fill=LGRAY, width=1)
+        d.line((MID_X, HDR_H + 2, MID_X, TOP_BOT - 2), fill=BLACK, width=1)
         d.line((0, TOP_BOT, W, TOP_BOT), fill=BLACK, width=2)
 
         # ════════════════════════════════════════════════════════════════════
@@ -177,13 +177,13 @@ class EInkDisplay:
         y += 32
 
         if sensor.source == "simulated":
-            note, note_col = "Simulated sensor data", GRAY
+            note, note_col = "Simulated sensor data", BLACK
         elif sensor.source == "dht22-last-good":
             note, note_col = f"DHT22  last-good  ({sensor.sensors_seen} sensors)", RED
         elif sensor.sensors_used == 0:
             note, note_col = f"DHT22  no data  ({sensor.sensors_seen} sensors)", RED
         else:
-            note, note_col = f"DHT22  {sensor.sensors_used}/{sensor.sensors_seen} sensors", GRAY
+            note, note_col = f"DHT22  {sensor.sensors_used}/{sensor.sensors_seen} sensors", BLACK
         d.text((PAD, y), note, fill=note_col, font=f14, anchor="lt")
 
         # ════════════════════════════════════════════════════════════════════
@@ -214,7 +214,7 @@ class EInkDisplay:
 
         # White data strip below scene
         d.rectangle((MID_X, text_y0, W, TOP_BOT), fill=WHITE)
-        d.line((MID_X, text_y0, W, text_y0), fill=LGRAY, width=1)
+        d.line((MID_X, text_y0, W, text_y0), fill=BLACK, width=1)
 
         x1       = MID_X + PAD
         wind_mph = current.windspeed_kmh * 0.621371
@@ -224,6 +224,9 @@ class EInkDisplay:
         # Temp (large, red if above threshold) + condition label right-aligned
         d.text((x1, y), f"{temp_f_out:.0f}\u00b0", fill=out_temp_col, font=f40b, anchor="lt")
         d.text((W - PAD, y), weather_label(current.weather_code), fill=BLACK, font=f18, anchor="rt")
+        if current.apparent_temperature_c is not None:
+            feels_f = _c_to_f(current.apparent_temperature_c)
+            d.text((W - PAD, y + 22), f"Feels like {feels_f:.0f}\u00b0F", fill=BLACK, font=f14, anchor="rt")
         y += 52
         d.text((x1, y), f"Humidity: {current.humidity_pct:.0f}%", fill=BLACK, font=f16b, anchor="lt")
         y += 22
@@ -263,7 +266,7 @@ class EInkDisplay:
                 lo_f = _c_to_f(day.temp_min_c)
                 d.text((cx, yw), f"{hi_f:.0f}\u00b0", fill=RED,   font=f22b, anchor="mt")
                 yw += 28
-                d.text((cx, yw), f"{lo_f:.0f}\u00b0", fill=LGRAY, font=f16b, anchor="mt")
+                d.text((cx, yw), f"{lo_f:.0f}\u00b0", fill=BLACK, font=f16b, anchor="mt")
                 yw += 22
 
                 # Rain probability — always shown; red if ≥50 %
@@ -279,7 +282,7 @@ class EInkDisplay:
                 if i < len(days) - 1:
                     d.line(
                         (cx + col_w // 2, TOP_BOT + 4, cx + col_w // 2, H - 4),
-                        fill=LGRAY, width=1,
+                        fill=BLACK, width=1,
                     )
 
         # ════════════════════════════════════════════════════════════════════
