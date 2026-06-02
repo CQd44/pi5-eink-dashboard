@@ -469,9 +469,11 @@ def draw_scene(
     if itype in cloud_itypes:
         dark  = itype in ("rain", "drizzle", "storm")
         if is_night:
-            cfill = 200 if dark else 230   # lighter so clouds show on black sky
+            # White paper shows through black sky → visible cloud silhouettes
+            cfill = (200, 200, 200) if dark else (230, 230, 230)
         else:
-            cfill = 40 if dark else 155
+            # All channels < 64 → black ink on white sky
+            cfill = (30, 30, 30) if dark else (55, 55, 55)
         csize   = max(w // 5, 30)
         cloud_positions = [
             (x0 + w // 5,      y0 + int(sky_h * 0.25)),
@@ -533,17 +535,18 @@ def draw_scene(
                     r = max(1, cell // 3)
                     cx2 = col_x + cell // 2
                     cy2 = row_y + cell // 2
-                    draw.ellipse((cx2 - r, cy2 - r, cx2 + r, cy2 + r), fill=170)
+                    draw.ellipse((cx2 - r, cy2 - r, cx2 + r, cy2 + r), fill=(60, 60, 60))
 
     # ── Layered hills (back → front, darkening) ───────────────────────────────
-    def _hill(pts_frac: list[tuple[float, float]], fill: int) -> None:
+    def _hill(pts_frac: list[tuple[float, float]], fill: tuple) -> None:
         pts = [(x0 + int(fx * w), y0 + int(fy * h)) for fx, fy in pts_frac]
         draw.polygon(pts, fill=fill)
 
-    # Hills: moonlit (lighter) at night so they show against the black sky.
-    hfar  = 210 if is_night else 190
-    hmid  = 160 if is_night else 115
-    hnear =  90 if is_night else  50
+    # Day: all channels < 64 → black ink (different shades visible in simulator).
+    # Night: all channels > 64 → white paper shows through black-ink sky.
+    hfar  = (150, 150, 150) if is_night else (55, 55, 55)
+    hmid  = (120, 120, 120) if is_night else (40, 40, 40)
+    hnear = (100, 100, 100) if is_night else (20, 20, 20)
 
     # Far hill — lightest
     _hill([
@@ -573,4 +576,4 @@ def draw_scene(
             (0.00, 1.00), (0.00, 0.90),
             (0.20, 0.87), (0.50, 0.88), (0.80, 0.86),
             (1.00, 0.89), (1.00, 1.00),
-        ], fill=245)
+        ], fill=(245, 245, 245))
