@@ -379,17 +379,34 @@ def draw_scene(
             # Sunglasses — random ~1-in-3 chance, stable within the hour
             random.seed(int(fhour) * 17 + 99)
             if random.random() < 0.33:
-                lg_w = max(4, sun_r // 2)
-                lg_h = max(2, sun_r // 4)
+                lg_w  = max(5, sun_r * 2 // 3)   # half-width of each lens
+                lg_h  = max(3, sun_r // 3)        # half-height
+                br    = max(1, lg_h // 2)          # corner radius
+                RED_C = (200, 0, 0)
+                BLK   = (0, 0, 0) if _ink == (0, 0, 0) else (30, 30, 30)
+                WHT   = (255, 255, 255)
                 for ex in (sun_x - eye_dx, sun_x + eye_dx):
+                    # Black lens
                     draw.rounded_rectangle(
                         (ex - lg_w, eye_y - lg_h, ex + lg_w, eye_y + lg_h),
-                        radius=max(1, lg_h // 2), fill=face_col,
+                        radius=br, fill=BLK,
                     )
+                    # Red frame border
+                    draw.rounded_rectangle(
+                        (ex - lg_w, eye_y - lg_h, ex + lg_w, eye_y + lg_h),
+                        radius=br, outline=RED_C, width=max(1, sun_r // 8),
+                    )
+                    # White glare line — diagonal from upper-left to lower-right
+                    draw.line(
+                        (ex - lg_w + max(1, lg_w // 3), eye_y - lg_h + 1,
+                         ex + lg_w - max(1, lg_w // 3), eye_y + lg_h - 1),
+                        fill=WHT, width=max(1, lg_h // 3),
+                    )
+                # Bridge between the two lenses
                 draw.line(
                     (sun_x - eye_dx + lg_w, eye_y,
                      sun_x + eye_dx - lg_w, eye_y),
-                    fill=face_col, width=max(1, sun_r // 10),
+                    fill=RED_C, width=max(1, sun_r // 10),
                 )
 
     # ── Moon (night) — phase-accurate, arc-tracked ───────────────────────────
@@ -464,18 +481,6 @@ def draw_scene(
             cloud_positions.append((x0 + w * 2 // 5, y0 + int(sky_h * 0.42)))
         for (cx, cy) in cloud_positions:
             _cloud(draw, cx, cy, csize, cfill)
-            # ── Diagonal hatching — subtle shading inside the cloud body
-            if not is_night:
-                h_col = min(255, cfill + 50)
-            else:
-                h_col = max(0, cfill - 30)
-            _r     = max(3, csize // 4)
-            sp     = max(3, csize // 8)
-            for hy in range(cy - _r + _r // 4, cy + _r // 4, sp):
-                draw.line(
-                    (cx - _r * 2, hy, cx + _r * 2, hy + _r // 2),
-                    fill=h_col, width=1,
-                )
 
     # ── Weather effects ───────────────────────────────────────────────────────
     random.seed(weather_code * 7 + hour)
