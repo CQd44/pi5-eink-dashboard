@@ -40,6 +40,8 @@ _ICON: dict[int, str] = {
     86: "snow",
     95: "storm",
     96: "storm",
+    97: "storm",
+    98: "storm",
     99: "storm",
 }
 
@@ -72,7 +74,9 @@ _LABEL: dict[int, str] = {
     86: "Heavy Snow Showers",
     95: "Thunderstorm",
     96: "Thunderstorm w/ Hail",
-    99: "Heavy Thunderstorm",
+    97: "Heavy Thunderstorm",
+    98: "Thunderstorm w/ Hail",
+    99: "Heavy Thunderstorm w/ Hail",
 }
 
 

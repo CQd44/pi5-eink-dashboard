@@ -98,7 +98,7 @@ class EInkDisplay:
         rotation: int = 0,
         width: int = 800,
         height: int = 480,
-        hot_temp_threshold_f: float = 100.0,
+        hot_temp_threshold_f: float = 90.0,
     ) -> None:
         self.rotation = rotation
         self.width = width
@@ -151,7 +151,9 @@ class EInkDisplay:
         temp_f_in  = _c_to_f(sensor.temperature_c)
 
         # ── Alert flags ───────────────────────────────────────────────────────
-        is_severe    = 95 <= current.weather_code <= 99
+        # Severe = only hail-producing storms; plain thunderstorms (95, 97) are
+        # common summer events and don't warrant a full red-header alert.
+        is_severe    = current.weather_code in (96, 98, 99)
         is_hot       = temp_f_out >= self._hot_temp_threshold_f
         alert        = is_severe or is_hot
         out_temp_col = RED if is_hot else BLACK
@@ -250,8 +252,9 @@ class EInkDisplay:
                 d.text((cx, yw), day_name, fill=BLACK, font=f16b, anchor="mt")
                 yw += 20
 
-                # Small icon — storm codes (95-99) drawn in red
-                icon_col = RED if 95 <= day.weather_code <= 99 else BLACK
+                # Small icon — hail storms (96, 98, 99) drawn in red; plain
+                # thunderstorms (95, 97) use black — common in summer, not an alert
+                icon_col = RED if day.weather_code in (96, 98, 99) else BLACK
                 draw_icon(d, cx, yw + 20, 40, day.weather_code, color=icon_col, bg=WHITE)
                 yw += 46
 
