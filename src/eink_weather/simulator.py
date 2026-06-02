@@ -60,9 +60,18 @@ def main() -> None:
     def _reload() -> None:
         if _FRAME_FILE.exists():
             try:
-                pil = Image.open(_FRAME_FILE).convert("RGB")
-                if pil.size != (W, H):
-                    pil = pil.resize((W, H), Image.LANCZOS)
+                from PIL import ImageOps
+                from .display import _split_bwr_planes
+                raw = Image.open(_FRAME_FILE).convert("RGB")
+                if raw.size != (W, H):
+                    raw = raw.resize((W, H), Image.LANCZOS)
+                # Convert to hardware-accurate 3-color (black / red / white)
+                black_p, red_p = _split_bwr_planes(raw)
+                black_mask = ImageOps.invert(black_p.convert("L"))
+                red_mask   = ImageOps.invert(red_p.convert("L"))
+                pil = Image.new("RGB", raw.size, (255, 255, 255))
+                pil.paste((0, 0, 0),   mask=black_mask)
+                pil.paste((200, 0, 0), mask=red_mask)
                 tk_img = ImageTk.PhotoImage(pil)
                 canvas.delete("frame")
                 canvas.create_image(BEZEL, BEZEL, anchor="nw", image=tk_img, tags="frame")

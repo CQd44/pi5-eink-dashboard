@@ -138,10 +138,10 @@ class EInkDisplay:
         d   = ImageDraw.Draw(img)
 
         # ── Fonts ─────────────────────────────────────────────────────────────
-        f12  = _font(False, 12)
-        f14  = _font(False, 14)
+        f12  = _font(True, 14)
+        f14  = _font(True, 14)
         f16b = _font(True,  16)
-        f18  = _font(False, 18)
+        f18  = _font(True,  18)
         f22b = _font(True,  22)
         f40b = _font(True,  40)
         f54b = _font(True,  54)
