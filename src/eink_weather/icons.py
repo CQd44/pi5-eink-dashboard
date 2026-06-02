@@ -110,14 +110,18 @@ def _sun(
 def _cloud(
     draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, col: int
 ) -> None:
-    """Three overlapping circles + base rectangle give a solid cloud silhouette."""
+    """Three overlapping circles + lumpy bottom give a fluffy cloud silhouette."""
     r = max(4, size // 4)
-    # left, center, right bumps
-    draw.ellipse((cx - r * 2, cy - r // 2, cx, cy + r),       fill=col)
-    draw.ellipse((cx - r,     cy - r,      cx + r, cy + r),    fill=col)
+    # top bumps — left, centre (tallest), right
+    draw.ellipse((cx - r * 2, cy - r // 2, cx,         cy + r), fill=col)
+    draw.ellipse((cx - r,     cy - r,      cx + r,     cy + r), fill=col)
     draw.ellipse((cx,         cy - r // 2, cx + r * 2, cy + r), fill=col)
-    # base fill
+    # solid body fill
     draw.rectangle((cx - r * 2, cy, cx + r * 2, cy + r), fill=col)
+    # bottom bumps — four small ellipses protruding below the base line
+    br = max(2, r * 2 // 5)
+    for bx in (cx - r * 3 // 2, cx - r // 2, cx + r // 2, cx + r * 3 // 2):
+        draw.ellipse((bx - br, cy + r - br, bx + br, cy + r + br), fill=col)
 
 
 def _rain_drops(
@@ -145,18 +149,24 @@ def _snow_dots(
 def _lightning(
     draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, col: int
 ) -> None:
-    """Simple jagged lightning-bolt polygon."""
-    w = max(4, size // 4)
-    h = max(6, size // 2)
+    """Classic ⚡ lightning-bolt — 6-point Z-shaped polygon.
+
+    Two outward wings (upper-right and lower-left) connected by a diagonal
+    band through the middle, matching the traditional bolt silhouette.
+    """
+    w = max(8, int(size * 0.55))   # total width
+    h = max(10, int(size * 0.72))  # total height
+    mu = cy + h * 2 // 5           # y of upper kink
+    ml = cy + h * 3 // 5           # y of lower kink
     pts = [
-        (cx + w,       cy),
-        (cx,           cy + h // 2),
-        (cx + w // 2,  cy + h // 2),
-        (cx - w,       cy + h),
-        (cx,           cy + h // 2),     # duplicate vertex, harmless
-        (cx - w // 2,  cy + h // 2),
+        (cx + w // 3,  cy),    # top tip    (right of centre)
+        (cx + w // 2,  mu),    # right outer wing
+        (cx - w // 6,  mu),    # right inner notch  (kink cuts left)
+        (cx - w // 3,  cy + h),# bottom tip (left of centre)
+        (cx - w // 2,  ml),    # left outer wing
+        (cx + w // 6,  ml),    # left inner notch   (kink cuts right)
     ]
-    draw.polygon(pts[:4], fill=col)
+    draw.polygon(pts, fill=col)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -327,6 +337,40 @@ def draw_scene(
                 y2 = sun_y + int((sun_r + 3 + ray_len) * math.sin(a))
                 draw.line((x1, y1, x2, y2), fill=_ink, width=lw)
 
+            # Smiling face — features cut out of the solid disc in sky_fill color
+            face_col = sky_fill
+            eye_r    = max(1, sun_r // 7)
+            eye_y    = sun_y - sun_r // 5
+            eye_dx   = sun_r // 3
+            draw.ellipse(
+                (sun_x - eye_dx - eye_r, eye_y - eye_r,
+                 sun_x - eye_dx + eye_r, eye_y + eye_r), fill=face_col)
+            draw.ellipse(
+                (sun_x + eye_dx - eye_r, eye_y - eye_r,
+                 sun_x + eye_dx + eye_r, eye_y + eye_r), fill=face_col)
+            smile_box = [
+                sun_x - sun_r // 3, sun_y - sun_r // 8,
+                sun_x + sun_r // 3, sun_y + sun_r // 3,
+            ]
+            draw.arc(smile_box, start=0, end=180,
+                     fill=face_col, width=max(1, sun_r // 8))
+
+            # Sunglasses — random ~1-in-3 chance, stable within the hour
+            random.seed(int(fhour) * 17 + 99)
+            if random.random() < 0.33:
+                lg_w = max(4, sun_r // 2)
+                lg_h = max(2, sun_r // 4)
+                for ex in (sun_x - eye_dx, sun_x + eye_dx):
+                    draw.rounded_rectangle(
+                        (ex - lg_w, eye_y - lg_h, ex + lg_w, eye_y + lg_h),
+                        radius=max(1, lg_h // 2), fill=face_col,
+                    )
+                draw.line(
+                    (sun_x - eye_dx + lg_w, eye_y,
+                     sun_x + eye_dx - lg_w, eye_y),
+                    fill=face_col, width=max(1, sun_r // 10),
+                )
+
     # ── Moon (night) — phase-accurate, arc-tracked ───────────────────────────
     if is_night:
         # Determine moon arc from actual moonrise/moonset if available,
@@ -399,6 +443,14 @@ def draw_scene(
             cloud_positions.append((x0 + w * 2 // 5, y0 + int(sky_h * 0.42)))
         for (cx, cy) in cloud_positions:
             _cloud(draw, cx, cy, csize, cfill)
+            # Highlight: lighter ellipse on upper-left quadrant for 3-D depth
+            h_r    = max(3, csize // 7)
+            h_fill = min(255, cfill + 75) if not is_night else min(255, cfill + 35)
+            draw.ellipse(
+                (cx - csize // 3 - h_r, cy - csize // 6 - h_r,
+                 cx - csize // 3 + h_r, cy - csize // 6 + h_r),
+                fill=h_fill,
+            )
 
     # ── Weather effects ───────────────────────────────────────────────────────
     random.seed(weather_code * 7 + hour)
