@@ -110,20 +110,39 @@ def _sun(
 def _cloud(
     draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, col: int
 ) -> None:
-    """Asymmetric puffy cloud: 3 top bumps + right lobe + lumpy base."""
-    r = max(4, size // 4)
-    # top profile: left (medium), centre (tallest), right (medium)
-    draw.ellipse((cx - r * 2,    cy - r // 2, cx,       cy + r),      fill=col)
-    draw.ellipse((cx - r,        cy - r,      cx + r,   cy + r),      fill=col)
-    draw.ellipse((cx,            cy - r // 2, cx + r*2, cy + r),      fill=col)
-    # right lobe — lower and wider, the distinctive thumb of the cloud
-    draw.ellipse((cx + r*3 // 2, cy - r // 6, cx + r*3, cy + r*4 // 3), fill=col)
-    # body fill spanning all lobes
-    draw.rectangle((cx - r*2, cy + r // 3, cx + r*3, cy + r), fill=col)
-    # bottom: three gentle bumps integrated flush with the base
-    br = max(2, r * 2 // 5)
-    for bx in (cx - r, cx + r // 4, cx + r * 3 // 2):
-        draw.ellipse((bx - br, cy + r - br, bx + br, cy + r + br), fill=col)
+    """Standard cloud-icon silhouette: 4 overlapping top circles, flat bottom.
+
+    Circle layout (left → right, shortest → tallest → short):
+        A  small,  far-left
+        B  large,  center-left  (tallest — peak of the cloud)
+        C  medium, center-right
+        D  small,  far-right
+    A filled rectangle ties the bottoms together for a clean flat base.
+    """
+    r = max(4, size // 4)          # base radius unit
+
+    # Circle centres (cx,cy is the geometric centre of the whole cloud)
+    ax, ay = cx - int(r * 1.55), cy + int(r * 0.10)   # A  small-left
+    bx, by = cx - int(r * 0.50), cy - int(r * 0.20)   # B  tall-center (peak)
+    ccx, cy2 = cx + int(r * 0.70), cy + int(r * 0.05) # C  medium-right
+    dx, dy = cx + int(r * 1.70), cy + int(r * 0.15)   # D  small-right
+
+    ra = int(r * 0.72)   # A radius
+    rb = int(r * 1.00)   # B radius  (tallest)
+    rc = int(r * 0.82)   # C radius
+    rd = int(r * 0.60)   # D radius
+
+    draw.ellipse((ax - ra, ay - ra, ax + ra, ay + ra), fill=col)
+    draw.ellipse((bx - rb, by - rb, bx + rb, by + rb), fill=col)
+    draw.ellipse((ccx - rc, cy2 - rc, ccx + rc, cy2 + rc), fill=col)
+    draw.ellipse((dx - rd, dy - rd, dx + rd, dy + rd), fill=col)
+
+    # Flat-bottomed rectangle that ties all four circles together
+    bottom = max(ay + ra, by + rb, cy2 + rc, dy + rd)
+    left   = ax - ra
+    right  = dx + rd
+    top    = bottom - int(r * 0.9)
+    draw.rectangle((left, top, right, bottom), fill=col)
 
 
 def _rain_drops(
@@ -445,32 +464,17 @@ def draw_scene(
             cloud_positions.append((x0 + w * 2 // 5, y0 + int(sky_h * 0.42)))
         for (cx, cy) in cloud_positions:
             _cloud(draw, cx, cy, csize, cfill)
-            # ── Diagonal hatching across upper body — classic illustration shading
+            # ── Diagonal hatching — subtle shading inside the cloud body
             if not is_night:
-                h_col = min(255, cfill + 65)   # lighter lines on day clouds
+                h_col = min(255, cfill + 50)
             else:
-                h_col = max(0,   cfill - 35)   # darker lines on night clouds
-            sp     = max(3, csize // 10)        # line spacing
-            half_w = csize * 3 // 5             # horizontal reach of each line
-            slant  = half_w // 3                # diagonal drop
-            y_top  = cy - csize // 4
-            y_mid  = cy + csize // 12
-            for hy in range(y_top, y_mid, sp):
+                h_col = max(0, cfill - 30)
+            _r     = max(3, csize // 4)
+            sp     = max(3, csize // 8)
+            for hy in range(cy - _r + _r // 4, cy + _r // 4, sp):
                 draw.line(
-                    (cx - half_w, hy, cx + half_w, hy + slant),
+                    (cx - _r * 2, hy, cx + _r * 2, hy + _r // 2),
                     fill=h_col, width=1,
-                )
-            # ── Per-bump highlight dots — each puff has its own lit upper-left
-            dot_r   = max(2, csize // 9)
-            dot_col = min(255, cfill + 85) if not is_night else max(0, cfill - 55)
-            for dbx, dby in (
-                (cx - csize // 5, cy - csize // 5),   # left bump
-                (cx,              cy - csize // 3),   # centre bump (highest)
-                (cx + csize // 5, cy - csize // 7),   # right bump
-            ):
-                draw.ellipse(
-                    (dbx - dot_r, dby - dot_r, dbx + dot_r, dby + dot_r),
-                    fill=dot_col,
                 )
 
     # ── Weather effects ───────────────────────────────────────────────────────
