@@ -115,7 +115,7 @@ def _sun(
 
 def _cloud(
     draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, col: int,
-    *, shadow: bool = True,
+    *, shadow: bool = False,
 ) -> None:
     """Standard cloud-icon silhouette: 4 overlapping top circles, flat bottom.
 
@@ -228,6 +228,69 @@ def _lightning(
     soy = max(1, int(size * 0.08))
     draw.polygon([(x + sox, y + soy) for x, y in pts], fill=(200, 0, 0))
     draw.polygon(pts, fill=col)
+
+
+def _cactus(
+    draw: ImageDraw.ImageDraw, x: int, y: int, height: int, col: tuple
+) -> None:
+    """Saguaro cactus silhouette; trunk grows upward from (x, y)."""
+    w     = max(2, int(height * 0.12))
+    arm_w = max(2, int(w * 0.80))
+    # Main trunk
+    draw.line([(x, y), (x, y - height)], fill=col, width=w)
+    # Left arm — lower
+    ly = y - int(height * 0.40)
+    lx = int(height * 0.25)
+    lu = int(height * 0.30)
+    draw.line([(x, ly), (x - lx, ly)],           fill=col, width=arm_w)
+    draw.line([(x - lx, ly), (x - lx, ly - lu)], fill=col, width=arm_w)
+    # Right arm — higher
+    ry = y - int(height * 0.60)
+    rx = int(height * 0.22)
+    ru = int(height * 0.25)
+    draw.line([(x, ry), (x + rx, ry)],           fill=col, width=arm_w)
+    draw.line([(x + rx, ry), (x + rx, ry - ru)], fill=col, width=arm_w)
+
+
+def _cattle_skull(
+    draw: ImageDraw.ImageDraw, cx: int, base_y: int, size: int,
+    col: tuple, accent: tuple
+) -> None:
+    """Cattle skull silhouette; jaw base at base_y.
+    col = body fill (white on dark bg), accent = eye/nose holes.
+    """
+    sw  = max(8,  int(size * 0.82))   # cranium half-width
+    ch  = max(5,  int(size * 0.48))   # cranium height
+    nw  = max(2,  int(size * 0.22))   # snout half-width
+    nh  = max(3,  int(size * 0.26))   # snout height
+    cran_bot = base_y - nh
+    cran_top = cran_bot - ch
+
+    # Horns — sweep outward and very slightly upward from cranium edges
+    hs = int(sw * 1.55)
+    ht = cran_top - int(ch * 0.08)
+    hw = max(2, int(size * 0.09))
+    draw.line([(cx - int(sw * 0.80), cran_top + int(ch * 0.18)), (cx - hs, ht)], fill=col, width=hw)
+    draw.line([(cx + int(sw * 0.80), cran_top + int(ch * 0.18)), (cx + hs, ht)], fill=col, width=hw)
+
+    # Cranium (wide ellipse)
+    draw.ellipse((cx - sw, cran_top, cx + sw, cran_bot), fill=col)
+    # Snout (narrower, overlaps cranium base)
+    draw.ellipse((cx - nw, cran_bot - int(nh * 0.30), cx + nw, base_y), fill=col)
+
+    # Eye sockets
+    er  = max(2, int(size * 0.11))
+    ey  = cran_top + int(ch * 0.46)
+    edx = max(3, int(sw * 0.44))
+    draw.ellipse((cx - edx - er, ey - er, cx - edx + er, ey + er), fill=accent)
+    draw.ellipse((cx + edx - er, ey - er, cx + edx + er, ey + er), fill=accent)
+
+    # Nasal holes
+    nr  = max(1, int(nw * 0.32))
+    ny  = cran_bot + int(nh * 0.18)
+    ndx = max(1, int(nw * 0.40))
+    draw.ellipse((cx - ndx - nr, ny - nr, cx - ndx + nr, ny + nr), fill=accent)
+    draw.ellipse((cx + ndx - nr, ny - nr, cx + ndx + nr, ny + nr), fill=accent)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -586,6 +649,14 @@ def draw_scene(
         (0.72, 0.64), (1.00, 0.70), (1.00, 1.00),
     ], fill=hmid_fill, outline=hmid_out)
 
+    # Cactus: rooted on mid-hill surface; drawn before near hill so its
+    # base is partially buried behind the foreground hill (depth illusion).
+    _cactus(draw,
+            x0 + int(w * 0.68),
+            y0 + int(h * 0.68),
+            max(18, int(h * 0.32)),
+            BLK)
+
     # Near hill — darkest / foreground
     _hill([
         (0.00, 1.00), (0.00, 0.85),
@@ -593,6 +664,14 @@ def draw_scene(
         (0.68, 0.73), (0.86, 0.80), (1.00, 0.83),
         (1.00, 1.00),
     ], fill=hnear_fill, outline=hnear_out)
+
+    # Cattle skull: resting on the near (foreground) hill.
+    # White body + red eye sockets — vivid on the black hill; very South TX.
+    _cattle_skull(draw,
+                  x0 + int(w * 0.20),
+                  y0 + int(h * 0.83),
+                  max(12, int(h * 0.28)),
+                  WHT, RED)
 
     # Snow ground cover (over hills)
     if itype == "snow":
