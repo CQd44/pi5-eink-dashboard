@@ -118,6 +118,7 @@ def _cloud(
         C  medium, center-right
         D  small,  far-right
     A filled rectangle ties the bottoms together for a clean flat base.
+    Rendered in 3 layers: red drop-shadow → white border mask → black body.
     """
     r = max(4, size // 4)          # base radius unit
 
@@ -132,17 +133,35 @@ def _cloud(
     rc = int(r * 0.82)   # C radius
     rd = int(r * 0.60)   # D radius
 
-    draw.ellipse((ax - ra, ay - ra, ax + ra, ay + ra), fill=col)
-    draw.ellipse((bx - rb, by - rb, bx + rb, by + rb), fill=col)
-    draw.ellipse((ccx - rc, cy2 - rc, ccx + rc, cy2 + rc), fill=col)
-    draw.ellipse((dx - rd, dy - rd, dx + rd, dy + rd), fill=col)
+    shapes = [
+        (ax, ay, ra),    # A: small-left
+        (bx, by, rb),    # B: tall-center (peak)
+        (ccx, cy2, rc),  # C: medium-right
+        (dx, dy, rd),    # D: small-right
+    ]
 
-    # Rounded-bottom rectangle that ties all four circles together
-    bottom = max(ay + ra, by + rb, cy2 + rc, dy + rd)
-    left   = ax - ra
-    right  = dx + rd
-    top    = bottom - int(r * 0.9)
+    bottom   = max(ay + ra, by + rb, cy2 + rc, dy + rd)
+    left     = ax - ra
+    right    = dx + rd
+    top      = bottom - int(r * 0.9)
     corner_r = max(2, int(r * 0.45))
+
+    # Layer 1: Red drop-shadow (offset down-right)
+    sox = max(1, int(r * 0.15))
+    soy = max(2, int(r * 0.20))
+    for ex, ey, rad in shapes:
+        draw.ellipse((ex - rad + sox, ey - rad + soy, ex + rad + sox, ey + rad + soy), fill=(200, 0, 0))
+    draw.rounded_rectangle((left + sox, top + soy, right + sox, bottom + soy), radius=corner_r, fill=(200, 0, 0))
+
+    # Layer 2: White border mask (slightly larger than the final body)
+    bw = max(1, int(r * 0.12))
+    for ex, ey, rad in shapes:
+        draw.ellipse((ex - rad - bw, ey - rad - bw, ex + rad + bw, ey + rad + bw), fill=(255, 255, 255))
+    draw.rounded_rectangle((left - bw, top - bw, right + bw, bottom + bw), radius=corner_r + bw, fill=(255, 255, 255))
+
+    # Layer 3: Main cloud body (original geometry in col)
+    for ex, ey, rad in shapes:
+        draw.ellipse((ex - rad, ey - rad, ex + rad, ey + rad), fill=col)
     draw.rounded_rectangle((left, top, right, bottom), radius=corner_r, fill=col)
 
 
