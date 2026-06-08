@@ -161,16 +161,24 @@ def _cloud(
             draw.ellipse((ex - rad + sox, ey - rad + soy, ex + rad + sox, ey + rad + soy), fill=(200, 0, 0))
         draw.rounded_rectangle((left + sox, top + soy, right + sox, bottom + soy), radius=corner_r, fill=(200, 0, 0))
 
-        # Layer 2: White border mask (slightly larger than the final body)
-        bw = max(1, int(r * 0.12))
+        # Layer 2: White gap around outline (separates shadow from border)
+        gap = max(1, int(r * 0.08))
         for ex, ey, rad in shapes:
-            draw.ellipse((ex - rad - bw, ey - rad - bw, ex + rad + bw, ey + rad + bw), fill=(255, 255, 255))
-        draw.rounded_rectangle((left - bw, top - bw, right + bw, bottom + bw), radius=corner_r + bw, fill=(255, 255, 255))
+            draw.ellipse((ex - rad - gap, ey - rad - gap, ex + rad + gap, ey + rad + gap), fill=(255, 255, 255))
+        draw.rounded_rectangle((left - gap, top - gap, right + gap, bottom + gap), radius=corner_r + gap, fill=(255, 255, 255))
 
-    # Layer 3: Main cloud body (original geometry in col)
+    # Layer 3: col-colored outline (full geometry)
+    bw = max(2, int(r * 0.22))   # border width
     for ex, ey, rad in shapes:
         draw.ellipse((ex - rad, ey - rad, ex + rad, ey + rad), fill=col)
     draw.rounded_rectangle((left, top, right, bottom), radius=corner_r, fill=col)
+
+    # Layer 4: White fill inset by border width — creates the hollow white body
+    for ex, ey, rad in shapes:
+        ir = max(1, rad - bw)
+        draw.ellipse((ex - ir, ey - ir, ex + ir, ey + ir), fill=(255, 255, 255))
+    draw.rounded_rectangle((left + bw, top + bw, right - bw, bottom - bw),
+                            radius=max(1, corner_r - bw), fill=(255, 255, 255))
 
 
 def _rain_drops(
