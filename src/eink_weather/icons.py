@@ -649,10 +649,9 @@ def draw_scene(
         (0.72, 0.64), (1.00, 0.70), (1.00, 1.00),
     ], fill=hmid_fill, outline=hmid_out)
 
-    # Cactus: rooted on mid-hill surface; drawn before near hill so its
-    # base is partially buried behind the foreground hill (depth illusion).
+    # Far-ish cactus: right side, past the rightmost cloud (~x>0.80).
     _cactus(draw,
-            x0 + int(w * 0.68),
+            x0 + int(w * 0.82),
             y0 + int(h * 0.68),
             max(18, int(h * 0.32)),
             BLK)
@@ -665,13 +664,12 @@ def draw_scene(
         (1.00, 1.00),
     ], fill=hnear_fill, outline=hnear_out)
 
-    # Cattle skull: resting on the near (foreground) hill.
-    # White body + red eye sockets — vivid on the black hill; very South TX.
-    _cattle_skull(draw,
-                  x0 + int(w * 0.20),
-                  y0 + int(h * 0.83),
-                  max(12, int(h * 0.28)),
-                  WHT, RED)
+    # Near cactus: larger, left-of-center on the foreground hill.
+    _cactus(draw,
+            x0 + int(w * 0.22),
+            y0 + int(h * 0.80),
+            max(22, int(h * 0.42)),
+            BLK)
 
     # Snow ground cover (over hills)
     if itype == "snow":
