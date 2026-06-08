@@ -97,18 +97,25 @@ def _sun(
 ) -> None:
     r = max(4, size // 4)
     lw = max(1, size // 16)
+    # Red glow halo + white separator — makes the sun pop on BWR displays
+    glow_r = r + max(2, r // 3)
+    draw.ellipse((cx - glow_r, cy - glow_r, cx + glow_r, cy + glow_r), fill=(200, 0, 0))
+    sep_r = r + max(1, r // 8)
+    draw.ellipse((cx - sep_r, cy - sep_r, cx + sep_r, cy + sep_r), fill=(255, 255, 255))
     draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=col)
+    # Rays start just outside the white separator
     for i in range(8):
         a = math.radians(i * 45)
-        x1 = cx + int((r + 2) * math.cos(a))
-        y1 = cy + int((r + 2) * math.sin(a))
-        x2 = cx + int((r + 2 + lw + size // 5) * math.cos(a))
-        y2 = cy + int((r + 2 + lw + size // 5) * math.sin(a))
+        x1 = cx + int((sep_r + 1) * math.cos(a))
+        y1 = cy + int((sep_r + 1) * math.sin(a))
+        x2 = cx + int((sep_r + 1 + lw + size // 5) * math.cos(a))
+        y2 = cy + int((sep_r + 1 + lw + size // 5) * math.sin(a))
         draw.line((x1, y1, x2, y2), fill=col, width=lw)
 
 
 def _cloud(
-    draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, col: int
+    draw: ImageDraw.ImageDraw, cx: int, cy: int, size: int, col: int,
+    *, shadow: bool = True,
 ) -> None:
     """Standard cloud-icon silhouette: 4 overlapping top circles, flat bottom.
 
@@ -146,18 +153,19 @@ def _cloud(
     top      = bottom - int(r * 0.9)
     corner_r = max(2, int(r * 0.45))
 
-    # Layer 1: Red drop-shadow (offset down-right)
-    sox = max(1, int(r * 0.15))
-    soy = max(2, int(r * 0.20))
-    for ex, ey, rad in shapes:
-        draw.ellipse((ex - rad + sox, ey - rad + soy, ex + rad + sox, ey + rad + soy), fill=(200, 0, 0))
-    draw.rounded_rectangle((left + sox, top + soy, right + sox, bottom + soy), radius=corner_r, fill=(200, 0, 0))
+    if shadow:
+        # Layer 1: Red drop-shadow (offset down-right)
+        sox = max(1, int(r * 0.15))
+        soy = max(2, int(r * 0.20))
+        for ex, ey, rad in shapes:
+            draw.ellipse((ex - rad + sox, ey - rad + soy, ex + rad + sox, ey + rad + soy), fill=(200, 0, 0))
+        draw.rounded_rectangle((left + sox, top + soy, right + sox, bottom + soy), radius=corner_r, fill=(200, 0, 0))
 
-    # Layer 2: White border mask (slightly larger than the final body)
-    bw = max(1, int(r * 0.12))
-    for ex, ey, rad in shapes:
-        draw.ellipse((ex - rad - bw, ey - rad - bw, ex + rad + bw, ey + rad + bw), fill=(255, 255, 255))
-    draw.rounded_rectangle((left - bw, top - bw, right + bw, bottom + bw), radius=corner_r + bw, fill=(255, 255, 255))
+        # Layer 2: White border mask (slightly larger than the final body)
+        bw = max(1, int(r * 0.12))
+        for ex, ey, rad in shapes:
+            draw.ellipse((ex - rad - bw, ey - rad - bw, ex + rad + bw, ey + rad + bw), fill=(255, 255, 255))
+        draw.rounded_rectangle((left - bw, top - bw, right + bw, bottom + bw), radius=corner_r + bw, fill=(255, 255, 255))
 
     # Layer 3: Main cloud body (original geometry in col)
     for ex, ey, rad in shapes:
@@ -207,6 +215,10 @@ def _lightning(
         (cx - w // 2,  ml),    # left outer wing
         (cx + w // 6,  ml),    # left inner notch   (kink cuts right)
     ]
+    # Red drop-shadow offset (same treatment as clouds)
+    sox = max(1, int(size * 0.06))
+    soy = max(1, int(size * 0.08))
+    draw.polygon([(x + sox, y + soy) for x, y in pts], fill=(200, 0, 0))
     draw.polygon(pts, fill=col)
 
 
@@ -240,9 +252,9 @@ def draw_icon(
     elif itype == "partly_cloudy":
         # Smaller sun peeking from top-left, cloud overlapping bottom-right.
         _sun(draw, cx - size // 8, cy - size // 8, int(size * 0.70), color)
-        # Erase the part of the sun where the cloud will sit (bg-colored cloud first).
-        _cloud(draw, cx + size // 10, cy + size // 10, int(size * 0.65), bg)
-        # Then draw the cloud outline on top.
+        # Erase the part of the sun where the cloud will sit (plain fill, no shadow bleed).
+        _cloud(draw, cx + size // 10, cy + size // 10, int(size * 0.65), bg, shadow=False)
+        # Then draw the cloud with full shadow on top.
         _cloud(draw, cx + size // 10, cy + size // 10, int(size * 0.65), color)
 
     elif itype == "cloudy":
@@ -363,6 +375,13 @@ def draw_scene(
         sun_x  = x0 + int(w * (0.10 + t * 0.80))
         sun_y  = y0 + int(sky_h * (0.88 - arc * 0.72))
         sun_r  = max(10, min(w // 10, 22))
+        # Red glow ring + sky-color separator (same depth trick as the hills)
+        glow_r = sun_r + max(3, sun_r // 3)
+        draw.ellipse((sun_x - glow_r, sun_y - glow_r, sun_x + glow_r, sun_y + glow_r),
+                     fill=(200, 0, 0))
+        sep_r = sun_r + max(1, sun_r // 7)
+        draw.ellipse((sun_x - sep_r, sun_y - sep_r, sun_x + sep_r, sun_y + sep_r),
+                     fill=sky_fill)
         draw.ellipse(
             (sun_x - sun_r, sun_y - sun_r, sun_x + sun_r, sun_y + sun_r),
             fill=_ink,
