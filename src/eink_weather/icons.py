@@ -231,25 +231,34 @@ def _lightning(
 
 
 def _cactus(
-    draw: ImageDraw.ImageDraw, x: int, y: int, height: int, col: tuple
+    draw: ImageDraw.ImageDraw, x: int, y: int, height: int, col: tuple,
+    *, outline: tuple | None = None
 ) -> None:
-    """Saguaro cactus silhouette; trunk grows upward from (x, y)."""
+    """Saguaro cactus silhouette; trunk grows upward from (x, y).
+    If outline is given, all segments are drawn wider in that color first.
+    """
     w     = max(2, int(height * 0.12))
     arm_w = max(2, int(w * 0.80))
-    # Main trunk
-    draw.line([(x, y), (x, y - height)], fill=col, width=w)
-    # Left arm — lower
-    ly = y - int(height * 0.40)
-    lx = int(height * 0.25)
-    lu = int(height * 0.30)
-    draw.line([(x, ly), (x - lx, ly)],           fill=col, width=arm_w)
-    draw.line([(x - lx, ly), (x - lx, ly - lu)], fill=col, width=arm_w)
-    # Right arm — higher
-    ry = y - int(height * 0.60)
-    rx = int(height * 0.22)
-    ru = int(height * 0.25)
-    draw.line([(x, ry), (x + rx, ry)],           fill=col, width=arm_w)
-    draw.line([(x + rx, ry), (x + rx, ry - ru)], fill=col, width=arm_w)
+    ow    = max(1, int(w * 0.50))  # extra pixels on each side for outline
+
+    segs = [
+        # Main trunk
+        (x, y, x, y - height, w),
+        # Left arm — lower
+        (x, y - int(height * 0.40), x - int(height * 0.25), y - int(height * 0.40), arm_w),
+        (x - int(height * 0.25), y - int(height * 0.40),
+         x - int(height * 0.25), y - int(height * 0.40) - int(height * 0.30), arm_w),
+        # Right arm — higher
+        (x, y - int(height * 0.60), x + int(height * 0.22), y - int(height * 0.60), arm_w),
+        (x + int(height * 0.22), y - int(height * 0.60),
+         x + int(height * 0.22), y - int(height * 0.60) - int(height * 0.25), arm_w),
+    ]
+
+    if outline is not None:
+        for x1, y1, x2, y2, lw in segs:
+            draw.line([(x1, y1), (x2, y2)], fill=outline, width=lw + ow * 2)
+    for x1, y1, x2, y2, lw in segs:
+        draw.line([(x1, y1), (x2, y2)], fill=col, width=lw)
 
 
 def _cattle_skull(
@@ -654,7 +663,7 @@ def draw_scene(
             x0 + int(w * 0.82),
             y0 + int(h * 0.68),
             max(18, int(h * 0.32)),
-            BLK)
+            BLK, outline=WHT if is_night else None)
 
     # Near hill — darkest / foreground
     _hill([
@@ -669,7 +678,7 @@ def draw_scene(
             x0 + int(w * 0.22),
             y0 + int(h * 0.80),
             max(22, int(h * 0.42)),
-            BLK)
+            BLK, outline=WHT if is_night else None)
 
     # Snow ground cover (over hills)
     if itype == "snow":
